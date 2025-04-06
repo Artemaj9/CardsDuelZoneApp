@@ -6,9 +6,7 @@ import Foundation
 
 enum SelectionState: Hashable, Codable {
   case info
-  case history
-  case calculate
-  case simulation
+  case game
 }
 
 class NavigationStateManager: ObservableObject {
