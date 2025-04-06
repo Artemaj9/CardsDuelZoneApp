@@ -5,7 +5,7 @@
 import SwiftUI
 
 struct LiquidMetal: View {
-  var effect: String = "KinematicShader"
+  var effect: String = "glowShader"
   
   var body: some View {
     ZStack {

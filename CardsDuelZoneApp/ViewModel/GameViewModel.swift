@@ -9,7 +9,8 @@ import Combine
 final class GameViewModel: ObservableObject {
   @Published var size: CGSize = CGSize(width: 393, height: 851)
   @Published var isSplash = true
-  @AppStorage("isWelcome") var isWelcome = true
+  //@AppStorage("isWelcome") var isWelcome = true
+  @Published var isWlcome = true
   
 // MARK: GAME
   @Published var isWin = false
@@ -125,6 +126,20 @@ final class GameViewModel: ObservableObject {
     remainingSeconds = 2 * 60 * 60
     startTimer()
   }
+  
+  
+  // MARK: CARD STACK LOGIC
+  func zIndexForCard(page: Int, card: Int) -> Int {
+    let cards = [1, 2, 3, 4]
+    let shift = (page - 1) % cards.count
+    let rotated = Array(cards[shift...] + cards[..<shift])
+    if let index = rotated.firstIndex(of: card) {
+      return cards.count - index
+    }
+    return 0
+  }
+  
+
   // MARK: - Layout
   
   var h: CGFloat {

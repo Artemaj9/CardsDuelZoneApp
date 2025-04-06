@@ -9,23 +9,27 @@ struct MainView: View {
   @EnvironmentObject var nm: NavigationStateManager
   @State private var rule = 1
   @State private var rotation: Double = 0
+  @State private var offset: CGFloat = .zero
   @Namespace private var animationNamespace
   
-  @State private var offset: CGFloat = .zero
   var body: some View {
-    ZStack {
-      bg
-      lines
-      title
-      cards
-      Text(vm.timeRemaining)
-        .cardFont(size: 16, style: .geologBold, color: .white)
-        .yOffset(vm.header)
-      letsplay
+    NavigationStack(path: $nm.path) {
+      ZStack {
+        bg
+        header
+        lines
+        title
+        cards
+        letsplay
+      }
+      .navigationDestination(for: SelectionState.self) { state in
+        if state == .game { Game() }
+        if state == .info { Info() }
+      }
     }
   }
   
-  private func pushToNextCard() {
+  func pushToNextCard() {
     withAnimation(.smooth) {
       if offset > 0 {
         offset = 200
@@ -33,6 +37,7 @@ struct MainView: View {
         offset = -200
       }
     }
+    
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
       withAnimation(.smooth(duration: 0.25)) {
         if rule < 4 {
@@ -45,19 +50,52 @@ struct MainView: View {
     }
   }
   
-  func zIndexForCard(page: Int, card: Int) -> Int {
-      let cards = [1, 2, 3, 4]
-      let shift = (page - 1) % cards.count
-      let rotated = Array(cards[shift...] + cards[..<shift])
-      if let index = rotated.firstIndex(of: card) {
-          return cards.count - index
-      }
-      return 0
-  }
-
   private var bg: some View {
     Image(.menubg)
       .backgroundFill()
+  }
+  
+  private var header: some View {
+    HStack(alignment: .top) {
+      Button {
+        nm.path.append(.info)
+      } label: {
+        Image(.infobtn)
+          .resizableToFit(height: 40)
+          .tappableBg()
+      }
+      
+      Spacer()
+      
+      Image(.balance)
+        .resizableToFit(height: 40)
+        .overlay {
+          Capsule()
+            .fill(Color(hex: "10000"))
+            .frame(76, 34)
+            .overlay {
+              Text("\(vm.balance)")
+                .cardFont(size: 16, style: .geologBold, color: .white)
+            }
+            .xOffset(16)
+        }
+      
+      Spacer()
+      Image(.bonus)
+        .resizableToFit(height: 54)
+        .overlay {
+          Capsule()
+            .fill(Color(hex: "10000"))
+            .frame(76, 34)
+            .overlay {
+              Text("\(vm.timeRemaining) h")
+                .cardFont(size: 16, style: .geologBold, color: .white)
+            }
+            .yOffset(-8)
+        }
+    }
+    .yOffset(vm.header)
+    .hPadding()
   }
   
   private var title: some View {
@@ -72,21 +110,18 @@ struct MainView: View {
         .resizableToFit()
         .scaleEffect(i == 3 ? 0.95 : 1)
         .hPadding(40)
-        .rotationEffect(Angle(degrees: Double(zIndexForCard(page: rule, card: i) - 4)*(-2)))
-        .zIndex(Double(zIndexForCard(page: rule, card: i)))
+        .rotationEffect(Angle(degrees: Double(vm.zIndexForCard(page: rule, card: i) - 4)*(-2)))
+        .zIndex(Double(vm.zIndexForCard(page: rule, card: i)))
         .offset(x: rule == i ? offset : 0)
         .rotation3DEffect(.init(degrees: rotation), axis: (0,1,0), perspective: 0.5)
-        .gesture (
+        .gesture(
           DragGesture()
-            .onChanged{ value in
+            .onChanged { value in
               let xOffset = value.translation.width
               offset = xOffset
             }
-            .onEnded{ value in
-              let xVelocity = max(-value.velocity.width/5, 0)
-              
+            .onEnded { value in
               if (abs(offset) > 100) {
-
                 pushToNextCard()
               } else {
                 withAnimation(.smooth ) {
@@ -94,11 +129,11 @@ struct MainView: View {
                 }
               }
             },
-          
           isEnabled: i == rule
         )
     }
   }
+  
   private var lines: some View {
     HStack(spacing: 20) {
       ForEach(1..<5) { i in

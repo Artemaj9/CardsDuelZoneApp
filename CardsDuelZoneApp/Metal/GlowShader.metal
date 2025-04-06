@@ -145,11 +145,11 @@ fragment float4 glowShader(VertexOut in [[stage_in]], constant float &time [[buf
   
   for(float i = 1.0; i < 5.0; i++){
     uv.y *= iResolution.y / iResolution.x;
-    uv.x += 0.6 / i * cos(i * 2.5* uv.y + time);
-    uv.y += 0.6 / i * cos(i * 1.5 * uv.x + time);
+    uv.x += 0.6 / i * cos(i * 2.5* uv.y + time/3);
+    uv.y += 0.6 / i * cos(i * 1.5 * uv.x + time/3);
   }
   
-  float4 color = float4((0.1)/abs(sin(time-uv.y-uv.x)));
+  float4 color = float4((0.1)/abs(sin(time/3-uv.y-uv.x)));
   return color;
 }
 
@@ -183,7 +183,7 @@ fragment float4 flow(VertexOut in [[stage_in]], constant float &time [[buffer(0)
 
    float3 col = 1;
 
-  for(float i = 1.0; i < 2.0; i++) {
+  for(float i = 1.0; i < 3.0; i++) {
     uv.y *= iResolution.y / iResolution.x;
     uv.x += 0.6 / i * cos(i * 2.5* uv.y + time);
     uv.y -= 0.6 / i * cos(i * 1.5 * uv.x + time);
@@ -320,13 +320,8 @@ fragment float4 sunShader(VertexOut in [[stage_in]], constant float &time [[buff
 
 fragment float4 KinematicShader(VertexOut in [[stage_in]], constant float &time [[buffer(0)]], constant float2 &iResolution [[buffer(1)]]) {
   float2 uv = in.texCoord;
-//  uv -= 0.5;
-//  uv = rotate2D( time*PI*0.4 ) * uv;
-//  uv += 0.5;
- // uv = scale(float2(sin(time)+1.0)) * uv;
-
-  float3 color = float3(0)*(1 - exp(-time*0.3));
-  float3 bg = float3(uv.x*0.6, uv.y*0.5, abs(sin(time)));
+  float3 color = float3(0);
+  float3 bg = float3(1);
   float3 bg2 = float3(0);
   for(int i = 0; i<10; i++) {
   //  float2 nv = uv;
