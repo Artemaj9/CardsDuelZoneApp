@@ -340,7 +340,7 @@ fragment float4 KinematicShader(VertexOut in [[stage_in]], constant float &time 
     color += circle(uv, float2(ip.x + t*vel, ip.y + ac*t*t/2))*float3(1);
   }
   
-  for(int i = 0; i<20; i++) {
+  for(int i = 0; i<5; i++) {
     //float2 nv = uv;
     float2 ip = float2(fract(sin(float(i)*3009))*0.9, 0);
     float ac = 0.09 + i*0.01;
@@ -352,7 +352,7 @@ fragment float4 KinematicShader(VertexOut in [[stage_in]], constant float &time 
     color += circle(uv, float2(ip.x + t*vel, ip.y + ac*t*t/2))*float3(1);
   }
   
-  for(int i = 0; i<20; i++) {
+  for(int i = 0; i<5; i++) {
 
     float2 ip = float2(fract(sin(float(i)*3009))*0.9, 0);
     float ac = 0.09 + i*0.01;

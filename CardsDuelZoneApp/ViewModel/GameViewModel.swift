@@ -14,16 +14,13 @@ final class GameViewModel: ObservableObject {
 // MARK: GAME
   @Published var isWin = false
   @Published var showPopUp = false
-
   @Published var time = 0
-  
   
   // SimulationStats
   @Published var totalSpins = 0
   @Published var totalWins = 0
   @Published  var selectedNumbers: Set<Int> = []
   @Published var showResetBtn = false
-  
 
   private var cancellables = Set<AnyCancellable>()
 
@@ -40,6 +37,9 @@ final class GameViewModel: ObservableObject {
   
   var w: CGFloat {
     size.width
+  }
+  var header: CGFloat {
+    isSEight ? -size.height*0.42 + 44 : -size.height*0.42
   }
   
   var isEightPlus: Bool {
@@ -62,5 +62,3 @@ final class GameViewModel: ObservableObject {
     return isSE || isEightPlus
   }
 }
-
-
