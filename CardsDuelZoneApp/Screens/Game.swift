@@ -15,6 +15,7 @@ struct Game: View {
       bg
       rulesbtn
       gameHeader
+      discard
       botHand
       zones
       playerHand
@@ -31,55 +32,88 @@ struct Game: View {
   // MARK: - Zone View
   func zoneView(for zone: Zone, title: String) -> some View {
     ZStack {
-      switch zone {
-      case .red:
-        Image(.z1)
-          .resizableToFit(width: 65)
-          .overlay(.top) {
-            Text(title)
-              .cardFont(size: 12, style: .geologReg, color: Color(hex: "FF0101"))
-              .yOffset(-20)
-          }
-          .overlay(.bottom) {
-            Text("2-6")
-              .cardFont(size: 12, style: .geologReg, color: Color(hex: "113410"))
-              .yOffset(20)
-          }
-      case .yellow:
-        Image(.z2)
-          .resizableToFit(width: 65)
-          .overlay(.top) {
-            Text(title)
-              .cardFont(size: 12, style: .geologReg, color: Color(hex: "FBFF01"))
-              .yOffset(-20)
-          }
-          .overlay(.bottom) {
-            Text("7-10")
-              .cardFont(size: 12, style: .geologReg, color: Color(hex: "113410"))
-              .yOffset(20)
-          }
-        
-      case .blue:
-        Image(.z3)
-          .resizableToFit(width: 65)
-          .overlay(.top) {
-            Text(title)
-              .cardFont(size: 12, style: .geologReg, color: Color(hex: "59A7FF"))
-              .yOffset(-20)
-          }
-          .overlay(.bottom) {
-            Text("J, Q, K, A")
-              .cardFont(size: 12, style: .geologReg, color: Color(hex: "113410"))
-              .yOffset(20)
-          }
+      let playerCardCount = vm.zones[zone]?.filter { $0.player == .player }.count ?? 0
+      let isLastCardBot = (vm.zones[zone]?.last?.player == .bot) ?? false
+      Group {
+        switch zone {
+        case .red:
+          Image(.z1)
+            .resizableToFit(width: 65)
+            .overlay {
+              Image(.zonehighl)
+                .resizableToFit(width: 64)
+                .opacity(playerCardCount == 0 || isLastCardBot ? 0 : 1)
+            }
+            .overlay(.top) {
+              Text(title)
+                .cardFont(size: 12, style: .geologReg, color: Color(hex: "FF0101"))
+                .yOffset(-20)
+            }
+            .overlay(.bottom) {
+              Text("2-6")
+                .cardFont(size: 12, style: .geologReg, color: Color(hex: "113410"))
+                .yOffset(20)
+            }
+          
+        case .yellow:
+          Image(.z2)
+            .resizableToFit(width: 65)
+            .overlay {
+              Image(.zonehighl)
+                .resizableToFit(width: 64)
+                .opacity(playerCardCount == 0 || isLastCardBot ? 0 : 1)
+            }
+            .overlay(.top) {
+              Text(title)
+                .cardFont(size: 12, style: .geologReg, color: Color(hex: "FBFF01"))
+                .yOffset(-20)
+            }
+            .overlay(.bottom) {
+              Text("7-10")
+                .cardFont(size: 12, style: .geologReg, color: Color(hex: "113410"))
+                .yOffset(20)
+            }
+          
+        case .blue:
+          Image(.z3)
+            .resizableToFit(width: 65)
+            .overlay {
+              Image(.zonehighl)
+                .resizableToFit(width: 64)
+                .opacity(playerCardCount == 0 || isLastCardBot ? 0 : 1)
+            }
+            .overlay(.top) {
+              Text(title)
+                .cardFont(size: 12, style: .geologReg, color: Color(hex: "59A7FF"))
+                .yOffset(-20)
+            }
+            .overlay(.bottom) {
+              Text("J, Q, K, A")
+                .cardFont(size: 12, style: .geologReg, color: Color(hex: "113410"))
+                .yOffset(20)
+            }
+        }
       }
       
+  
+    
       ForEach(Array(vm.zones[zone]?.enumerated() ?? [].enumerated()), id: \.element.id) { index, played in
+       
           Image(played.card.name)
               .resizableToFit(height: 60)
               .yOffset(Double(index*10))
+              .offset(y: -20)
       }
-    }
+      
+      if playerCardCount != 0 && !isLastCardBot {
+        Text("x\(playerCardCount)")
+          .cardFont(size: 30, style: .geologReg, color: .white)
+          .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
+          .yOffset(vm.h*0.08)
+      }
+      
+                       }
+    .animation(.easeInOut(duration: 0.5),value: vm.zones[zone]?.count)
     .onTapGesture {
       vm.placeSelectedCard(in: zone)
     }
@@ -151,6 +185,23 @@ struct Game: View {
     .yOffset(vm.h*0.05)
   }
   
+  private var discard: some View {
+    Button {
+      if vm.hand.count >= 7, let selected = vm.selectedCard {
+        vm.discardSelectedCard()
+      } else {
+        vm.drawCard(for: .player)
+      }
+    } label: {
+      Image(.discard)
+        .resizableToFit(height: 80)
+    }
+    .disabled(vm.hand.count < 7 || vm.selectedCard == nil)
+    .opacity(vm.hand.count < 7 || vm.selectedCard == nil ? 0.3 : 1)
+    .animation(.easeInOut, value: vm.hand.count < 7 || vm.selectedCard == nil)
+    .offset(-vm.w*0.4, -vm.h*0.05)
+  }
+  
   private var playerHand: some View {
     HStack(spacing: 2) {
       ForEach(vm.hand) { card in
@@ -198,6 +249,9 @@ struct Game: View {
         Image(.newcardbtn)
           .resizableToFit(height: 44)
       }
+      .disabled(vm.hand.count < 7 || vm.selectedCard == nil)
+      .opacity(vm.hand.count < 7 || vm.selectedCard == nil ? 0.7 : 1)
+      .animation(.easeInOut, value: vm.hand.count < 7 || vm.selectedCard == nil)
     }
     .yOffset(vm.h*0.4)
     

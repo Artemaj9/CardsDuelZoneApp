@@ -38,6 +38,7 @@ final class GameViewModel: ObservableObject {
   @Published var isGameOver = false
   @Published var playerWon = false
   @Published var finalWinnings: Int = 0
+  @Published var turnOn = true
   var bet: Int = 100
 
   // MARK: Game Setup
@@ -66,6 +67,8 @@ final class GameViewModel: ObservableObject {
 
   // MARK: Turn Handling
   func botTurn() {
+    self.turnOn = false
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [self] in
       for card in botHand {
           let zonesToTry = validZones(for: card)
           for zone in zonesToTry {
@@ -79,8 +82,11 @@ final class GameViewModel: ObservableObject {
       if !botHand.isEmpty {
           discardPile.append(botHand.removeFirst())
       }
-      drawCard(for: .bot)
-    checkForGameEnd()
+      self.drawCard(for: .bot)
+      checkForGameEnd()
+      turnOn = false
+    }
+  
   }
 
   func drawCard(for player: Player) {
@@ -194,7 +200,7 @@ final class GameViewModel: ObservableObject {
       let bothHandsEmpty = hand.isEmpty && botHand.isEmpty
       let noCardsToDraw = drawPile.isEmpty
 
-      if (bothHandsEmpty && noCardsToDraw) || (!playerCanMove && !botHand.isEmpty) {
+    if (bothHandsEmpty && noCardsToDraw) || (!playerCanMove && !botHand.isEmpty && noCardsToDraw) {
           endGame()
       }
   }
@@ -239,185 +245,53 @@ final class GameViewModel: ObservableObject {
       return false
   }
   
+  func discardRandomPlayerCard() {
+      guard hand.count == 7, !drawPile.isEmpty else { return }
+      guard let randomCard = hand.randomElement() else { return }
+      if let index = hand.firstIndex(of: randomCard) {
+          hand.remove(at: index)
+      }
+      discardPile.append(randomCard)
+      drawCard(for: .player)
+      botTurn()
+  }
+  
   func playerDidFinishTurn() {
       drawCard(for: .player)
       botTurn()
       checkForGameEnd()
   }
   
- /*
-  // MARK: Game Logic
-  @Published var hand: [Card] = []
-  @Published var botHand: [Card] = []
-  @Published var drawPile: [Card] = []
-  @Published var discardPile: [Card] = []
+  func resetGame() {
+      // Reset hands
+      hand = []
+      botHand = []
 
-  
-  @Published var zones: [Zone: [Card]] = [
-      .red: [],
-      .yellow: [],
-      .blue: []
-  ]
-  @Published var selectedCard: Card?
+      // Reset draw pile, discard pile, and zones
+      drawPile = []
+      discardPile = []
+      zones = [.red: [], .yellow: [], .blue: []]
 
-  func startGame() {
-        let allCards = generateFullDeck().shuffled()
-        hand = Array(allCards.prefix(7))
-        botHand = Array(allCards.dropFirst(7).prefix(7))
-        drawPile = Array(allCards.dropFirst(14))
-    }
-  
-  
-  private func generateFullDeck() -> [Card] {
-    var cards: [Card] = []
-    
-    let suits = ["b", "g", "s", "w"]
-    for suit in suits {
-      for value in 2...14 {
-        let name = "\(suit)\(value)"
-        cards.append(Card(name: name))
-      }
-    }
-    cards.append(Card(name: "joker"))
-    
-    return cards
-  }
-  
-  func botTurn() {
-      for card in botHand {
-          let zonesToTry = validZones(for: card)
-
-          for zone in zonesToTry {
-              if canPlay(card: card, in: zone) {
-                  playBotCard(card, in: zone)
-                  return
-              }
-          }
-      }
-
-      if !botHand.isEmpty {
-          let folded = botHand.removeFirst()
-      }
-
-      if let drawn = drawPile.first {
-          botHand.append(drawn)
-          drawPile.removeFirst()
-      }
-  }
-  
-  
-  func place(card: Card, in zone: Zone) {
-      guard validZones(for: card).contains(zone) else { return }
-
-      if !card.isJoker,
-         let top = zones[zone]?.last,
-         card.value < top.value {
-          return
-      }
-
-      if let index = hand.firstIndex(of: card) {
-          hand.remove(at: index)
-      }
-
-      zones[zone, default: []].append(card)
+      // Reset selected card and game over state
       selectedCard = nil
+      isGameOver = false
+      playerWon = false
+      finalWinnings = 0
+
+      // Reset turn state and bet
+      turnOn = true
+      bet = 100
+
+      // Start a new game setup
+      startGame()
   }
   
-  func playerDidFinishTurn() {
-    //drawCardForPlayer()
-      botTurn()
-  }
 
-  enum Player {
-      case player, bot
-  }
-
-  func drawCard(for player: Player) {
-      guard let card = drawPile.first else { return }
-      drawPile.removeFirst()
-      
-      switch player {
-      case .player:
-          hand.append(card)
-      case .bot:
-          botHand.append(card)
-      }
-  }
-  
-  
-  func placeSelectedCard(in zone: Zone) {
-      guard let card = selectedCard else { return }
-
-      // Validate zone compatibility
-      if card.zoneColor == zone || card.isJoker {
-          zones[zone, default: []].append(card)
-          hand.removeAll { $0 == card }
-          selectedCard = nil
-          drawCard(for: .player)
-
-          botTurn()
-      }
-  }
-  
-  
-  func discardSelectedCard() {
-      guard let card = selectedCard else { return }
-
-      discardPile.append(card)
-      hand.removeAll { $0 == card }
-      selectedCard = nil
-      drawCard(for: .player)
-
-      botTurn()
-  }
-  
-  func winnerFor(zone: Zone) -> Player? {
-      guard let last = zones[zone]?.last else { return nil }
-      
-      if last.name == "joker" {
-          // Joker always wins — check who played it
-          return hand.contains(last) ? .player : .bot
-      }
-
-      return hand.contains(last) ? .player : .bot
-  }
-  
-  func selectCard(_ card: Card) {
-      selectedCard = card
-  }
-  
-  func validZones(for card: Card) -> [Zone] {
-      if card.isJoker {
-          return Zone.allCases
-      }
-      return card.zoneColor.map { [$0] } ?? []
-  }
-
-  func canPlay(card: Card, in zone: Zone) -> Bool {
-      let cardsInZone = zones[zone, default: []]
-
-      // Joker can always be played
-      if card.isJoker { return true }
-
-      if let topCard = cardsInZone.last {
-          return card.value >= topCard.value
-      }
-
-      return true // Empty zone
-  }
-
-  func playBotCard(_ card: Card, in zone: Zone) {
-      if let index = botHand.firstIndex(of: card) {
-          botHand.remove(at: index)
-      }
-      zones[zone, default: []].append(card)
-      print("Bot plays \(card.name) in \(zone.rawValue.uppercased())")
-  }
-  */
   
   func resetvm() {
     showPopUp = false
     showResetBtn = false
+    resetGame()
   }
 
   // MARK: Bonus Timer
