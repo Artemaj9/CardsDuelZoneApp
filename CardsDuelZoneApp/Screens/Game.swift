@@ -7,29 +7,88 @@ import SwiftUI
 struct Game: View {
   @EnvironmentObject var vm: GameViewModel
   @EnvironmentObject var nm: NavigationStateManager
-  @State private var isBetStage = true
+  @State private var isBetStage = false
   @State private var showRules = false
   
-    var body: some View {
-      ZStack {
-        Image(.gamebg)
-          .backgroundFill()
-        
-        Color(hex: "030E03")
-          .opacity(0.6)
-          .ignoresSafeArea()
-        BackBlurView(radius: 10)
-          .ignoresSafeArea()
-        
-        toMenu
-        rulesbtn
-        
-    
-        rulesOverlay
-       
-      }
-      .navigationBarBackButtonHidden()
+  var body: some View {
+    ZStack {
+      bg
+      rulesbtn
+      gameHeader
+      botHand
+      zones
+      playerHand
+      bottomRow
+      betStage
+      rulesOverlay
     }
+    .onAppear {
+      vm.startGame()
+    }
+    .navigationBarBackButtonHidden()
+  }
+  
+  // MARK: - Zone View
+  func zoneView(for zone: Zone, title: String) -> some View {
+    ZStack {
+      switch zone {
+      case .red:
+        Image(.z1)
+          .resizableToFit(width: 65)
+          .overlay(.top) {
+            Text(title)
+              .cardFont(size: 12, style: .geologReg, color: Color(hex: "FF0101"))
+              .yOffset(-20)
+          }
+          .overlay(.bottom) {
+            Text("2-6")
+              .cardFont(size: 12, style: .geologReg, color: Color(hex: "113410"))
+              .yOffset(20)
+          }
+      case .yellow:
+        Image(.z2)
+          .resizableToFit(width: 65)
+          .overlay(.top) {
+            Text(title)
+              .cardFont(size: 12, style: .geologReg, color: Color(hex: "FBFF01"))
+              .yOffset(-20)
+          }
+          .overlay(.bottom) {
+            Text("7-10")
+              .cardFont(size: 12, style: .geologReg, color: Color(hex: "113410"))
+              .yOffset(20)
+          }
+        
+      case .blue:
+        Image(.z3)
+          .resizableToFit(width: 65)
+          .overlay(.top) {
+            Text(title)
+              .cardFont(size: 12, style: .geologReg, color: Color(hex: "59A7FF"))
+              .yOffset(-20)
+          }
+          .overlay(.bottom) {
+            Text("J, Q, K, A")
+              .cardFont(size: 12, style: .geologReg, color: Color(hex: "113410"))
+              .yOffset(20)
+          }
+      }
+      
+      ForEach(Array(vm.zones[zone]?.enumerated() ?? [].enumerated()), id: \.element.id) { index, played in
+          Image(played.card.name)
+              .resizableToFit(height: 60)
+              .yOffset(Double(index*10))
+      }
+    }
+    .onTapGesture {
+      vm.placeSelectedCard(in: zone)
+    }
+  }
+  
+  private var bg: some View {
+    Image(.gamebg)
+      .backgroundFill()
+  }
   
   private var rulesbtn: some View {
     Button {
@@ -41,6 +100,120 @@ struct Game: View {
         .resizableToFit(height: 40)
     }
     .offset(vm.w*0.4, vm.header)
+  }
+  
+  @ViewBuilder private var gameHeader: some View {
+    homebtn
+    Image(.gamemoney)
+      .resizableToFit(height: 40)
+      .overlay {
+        Capsule()
+          .fill(Color(hex: "10000"))
+          .frame(76, 34)
+          .overlay {
+            Text("\(vm.balance)")
+              .cardFont(size: 16, style: .geologBold, color: .white)
+          }
+          .xOffset(16)
+      }
+      .yOffset(vm.header)
+  }
+  
+  private var homebtn: some View {
+    Button {
+      nm.path = []
+      vm.resetvm()
+    } label: {
+      Image(.homebtn)
+        .resizableToFit(height: 40)
+    }
+    .offset(-vm.w*0.4, vm.header)
+  }
+  
+  private var botHand: some View {
+    HStack(spacing: 0) {
+      ForEach(vm.botHand) { card in
+        Image("back")
+          .resizableToFit(height: 60)
+      }
+    }
+    .yOffset(-vm.h*0.15)
+  }
+  
+  private var zones: some View {
+    // MARK: ZONES
+    HStack(spacing: 12) {
+      zoneView(for: .red, title: "Red")
+      zoneView(for: .yellow, title: "Yellow")
+      zoneView(for: .blue, title: "Blue")
+    }
+    .padding(.vertical, 20)
+    .yOffset(vm.h*0.05)
+  }
+  
+  private var playerHand: some View {
+    HStack(spacing: 2) {
+      ForEach(vm.hand) { card in
+        Image(card.name)
+          .resizableToFit(height: 75)
+          .background(vm.selectedCard == card ? Color(hex: "FF3BC4") : Color.gray.opacity(0))
+          .cornerRadius(4)
+          .onTapGesture {
+            vm.selectCard(card)
+          }
+      }
+    }
+    .yOffset(vm.h*0.25)
+  }
+  
+  private var bottomRow: some View {
+    HStack {
+      Button {
+        vm.resetvm()
+      } label: {
+        Image(.resetbtn)
+          .resizableToFit(height: 44)
+      }
+      
+      Image(.yourbet)
+        .resizableToFit(height: 71)
+        .overlay {
+          Capsule()
+            .fill(Color(hex: "0C1410"))
+            .frame(56, 34)
+            .overlay {
+              Text("\(vm.bet)")
+                .cardFont(size: 15, style: .geologBold, color: .white)
+            }
+            .yOffset(-8)
+        }
+      
+      Button {
+        if vm.hand.count >= 7, let selected = vm.selectedCard {
+          vm.discardSelectedCard()
+        } else {
+          vm.drawCard(for: .player)
+        }
+      } label: {
+        Image(.newcardbtn)
+          .resizableToFit(height: 44)
+      }
+    }
+    .yOffset(vm.h*0.4)
+    
+  }
+  
+  private var betStage: some View  {
+    Group {
+      Color(hex: "030E03")
+        .opacity(0.6)
+        .ignoresSafeArea()
+      BackBlurView(radius: 10)
+        .ignoresSafeArea()
+      
+      toMenu
+    }
+    .transparentIfNot(isBetStage)
   }
   
   private var toMenu: some View {
@@ -59,13 +232,24 @@ struct Game: View {
         Rules(showRules: $showRules)
       }
     }
-   .transparentIfNot(showRules)
-   .animation(.easeInOut, value: showRules)
+    .transparentIfNot(showRules)
+    .animation(.easeInOut, value: showRules)
+  }
+}
+
+struct CardView: View {
+  let card: Card
+  
+  var body: some View {
+    Image(card.name)
+      .resizableToFit()
+      .frame(width: 40, height: 60)
+      .cornerRadius(6)
   }
 }
 
 #Preview {
-    Game()
+  Game()
     .nm
     .vm
 }
