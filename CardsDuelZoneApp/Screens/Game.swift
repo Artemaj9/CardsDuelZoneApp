@@ -7,8 +7,9 @@ import SwiftUI
 struct Game: View {
   @EnvironmentObject var vm: GameViewModel
   @EnvironmentObject var nm: NavigationStateManager
-  @State private var isBetStage = false
+  @State private var isBetStage = true
   @State private var showRules = false
+  @State private var showPicker = false
   
   var body: some View {
     ZStack {
@@ -21,18 +22,45 @@ struct Game: View {
       playerHand
       bottomRow
       betStage
+      ZStack {
+        if vm.isGameOver {
+          EndGame(showRules: $showRules, isBetStage: $isBetStage)
+        }
+      }
+      .transparentIfNot(vm.isGameOver)
+      .animation(.easeInOut, value: vm.isGameOver)
+      
       rulesOverlay
     }
-    .onAppear {
-      vm.startGame()
-    }
     .navigationBarBackButtonHidden()
+    .sheet(isPresented: $showPicker) {
+      ZStack {
+        VStack(spacing: 0) {
+          Picker("Select a Bet", selection: $vm.bet) {
+            ForEach(Array(stride(from: 10, through: min(500, vm.balance), by: 10)), id: \.self) { number in
+                  Text("\(number)").tag(number)
+                      .foregroundStyle(.white)
+              }
+          }
+          .pickerStyle(.wheel)
+          .frame(height: 180)
+              
+          okBtn
+            .offset(y: vm.isSEight ? -24 : 0)
+        }
+      }
+      .offset(y: 20)
+      .vPadding()
+      .presentationDetents([.fraction(vm.isSEight ? 0.4 : 0.33)])
+      .background(BackgroundClearView(color: Color(hex: "808080").opacity(0.1)))
+      .background(.ultraThinMaterial)
+    }
   }
   
   // MARK: - Zone View
   func zoneView(for zone: Zone, title: String) -> some View {
     ZStack {
-      let playerCardCount = vm.zones[zone]?.filter { $0.player == .player }.count ?? 0
+      let playerCardCount = vm.multiplier(for: vm.zones[zone]?.filter { $0.player == .player }.count ?? 0)
       let isLastCardBot = (vm.zones[zone]?.last?.player == .bot) ?? false
       Group {
         switch zone {
@@ -95,14 +123,12 @@ struct Game: View {
         }
       }
       
-  
-    
       ForEach(Array(vm.zones[zone]?.enumerated() ?? [].enumerated()), id: \.element.id) { index, played in
        
           Image(played.card.name)
               .resizableToFit(height: 60)
               .yOffset(Double(index*10))
-              .offset(y: -20)
+              .offset(y: -50)
       }
       
       if playerCardCount != 0 && !isLastCardBot {
@@ -122,6 +148,15 @@ struct Game: View {
   private var bg: some View {
     Image(.gamebg)
       .backgroundFill()
+  }
+  
+  private var okBtn: some View {
+    Button {
+      showPicker = false
+    } label: {
+      Image(.okbtn)
+        .resizableToFit(height: 44)
+    }
   }
   
   private var rulesbtn: some View {
@@ -207,7 +242,12 @@ struct Game: View {
       ForEach(vm.hand) { card in
         Image(card.name)
           .resizableToFit(height: 75)
-          .background(vm.selectedCard == card ? Color(hex: "FF3BC4") : Color.gray.opacity(0))
+          .background(
+            Rectangle()
+              .fill(vm.selectedCard == card ? Color(hex: "FF3BC4") : Color.gray.opacity(0))
+                .scaleEffect(x: card.name == "joker" ? 1.1 : 1)
+            
+          )
           .cornerRadius(4)
           .onTapGesture {
             vm.selectCard(card)
@@ -221,6 +261,9 @@ struct Game: View {
     HStack {
       Button {
         vm.resetvm()
+        withAnimation {
+          isBetStage = true
+        }
       } label: {
         Image(.resetbtn)
           .resizableToFit(height: 44)
@@ -254,10 +297,10 @@ struct Game: View {
       .animation(.easeInOut, value: vm.hand.count < 7 || vm.selectedCard == nil)
     }
     .yOffset(vm.h*0.4)
-    
+    .yOffsetIf(vm.isSEight, -40)
   }
   
-  private var betStage: some View  {
+  private var betStage: some View {
     Group {
       Color(hex: "030E03")
         .opacity(0.6)
@@ -265,19 +308,65 @@ struct Game: View {
       BackBlurView(radius: 10)
         .ignoresSafeArea()
       
-      toMenu
+      playbtn
+      rulesbtn
+      homebtn
+      Image(.betbg)
+        .resizableToFit(height: 100)
+        .overlay {
+          Capsule()
+            .fill(Color(hex: "0C1410"))
+            .frame(87, 34)
+            .overlay {
+              Text("\(vm.bet)")
+                .cardFont(size: 16, style: .geologBold, color: .white)
+            }
+            .onTapGesture {
+              showPicker = true
+            }
+        }
+        .overlay(.leading) {
+          Button {
+            if vm.bet > 10 {
+              vm.bet -= 10
+            }
+          } label: {
+            Image(.minusbtn)
+              .resizableToFit(height: 70)
+          }
+          .opacity(vm.bet <= 10 ? 0.5 : 1)
+          .yOffset(4)
+        }
+        .overlay(.trailing) {
+          Button {
+            if vm.balance >= vm.bet + 10  && vm.bet < 500 {
+              vm.bet += 10
+            }
+          } label: {
+            Image(.plusbtn)
+              .resizableToFit(height: 70)
+          }
+          .opacity(vm.balance >= vm.bet + 10  && vm.bet < 500 ? 1 : 0.5)
+          .yOffset(4)
+
+        }
+        .onAppear {
+          vm.bet = min(100, vm.balance)
+        }
     }
     .transparentIfNot(isBetStage)
   }
   
-  private var toMenu: some View {
+  private var playbtn: some View {
     Button {
-      nm.path = []
+      vm.resetGame()
+      isBetStage = false
     } label: {
-      Image(.tomenu)
+      Image(.playbtn)
         .resizableToFit(height: 74)
     }
     .yOffset(vm.h*0.4)
+    .yOffsetIf(vm.isSEight, -34)
   }
   
   private var rulesOverlay: some View {

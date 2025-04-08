@@ -21,6 +21,23 @@ struct MainView: View {
         title
         cards
         letsplay
+        ZStack {
+          if vm.showNoMoney {
+            NotMoney()
+          }
+        }
+        .opacity(vm.showNoMoney ? 1 : 0)
+        .zIndex(10)
+        .animation(.easeInOut, value: vm.showNoMoney)
+        ZStack {
+          if vm.canClaimBonus {
+            TakeBonus()
+              
+          }
+        }
+        .zIndex(10)
+        .opacity(vm.canClaimBonus ? 1 : 0)
+        .animation(.easeInOut, value: vm.canClaimBonus)
       }
       .navigationDestination(for: SelectionState.self) { state in
         if state == .game { Game() }
@@ -95,6 +112,7 @@ struct MainView: View {
         }
     }
     .yOffset(vm.header)
+    .yOffsetIf(vm.isSEight, 12)
     .hPadding()
   }
   
@@ -102,6 +120,7 @@ struct MainView: View {
     Text("Strategic card battles")
       .cardFont(size: 27, style: .courgetReg, color: .white)
       .yOffset(-vm.h*0.34)
+      .yOffsetIf(vm.isSEight, 28)
   }
   
   private var cards: some View {
@@ -132,6 +151,7 @@ struct MainView: View {
           isEnabled: i == rule
         )
     }
+    .yOffsetIf(vm.isSEight, -8)
   }
   
   private var lines: some View {
@@ -151,6 +171,7 @@ struct MainView: View {
       }
     }
     .yOffset(vm.h*0.32)
+    .yOffsetIf(vm.isSEight, -30)
   }
   
   private var letsplay: some View {
@@ -161,6 +182,7 @@ struct MainView: View {
         .resizableToFit(height: 74)
     }
     .yOffset(vm.h*0.42)
+    .yOffsetIf(vm.isSEight, -48)
   }
 }
 

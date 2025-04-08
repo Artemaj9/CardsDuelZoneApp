@@ -53,6 +53,7 @@ struct Rules: View {
           
         }
         .yOffset(vm.h*0.4)
+        .yOffsetIf(vm.isSEight, -40)
       }
       .onAppear {
         flow = true

@@ -40,6 +40,7 @@ struct Welcome: View {
       }
     }
     .yOffset(-vm.h*0.42)
+    .yOffsetIf(vm.isSEight, 30)
   }
   
   private var page1: some View {
@@ -72,8 +73,10 @@ struct Welcome: View {
           .resizableToFit(height: 74)
       }
       .yOffset(vm.h*0.4)
+      .yOffsetIf(vm.isSEight, -24)
     }
     .xOffsetIf(page != 1, -vm.w)
+   
   }
   
   private var page2: some View {
@@ -106,6 +109,7 @@ struct Welcome: View {
           .resizableToFit(height: 74)
       }
       .yOffset(vm.h*0.4)
+      .yOffsetIf(vm.isSEight, -24)
     }
     .xOffset(page == 2 ? 0 : (page == 1 ? vm.w : -vm.w))
   }
@@ -114,10 +118,7 @@ struct Welcome: View {
     Group {
       Image(.wbg3)
         .backgroundFill()
-      //        Image(.wtxt)
-      //          .resizableToFit()
-      //          .hPadding(40)
-      //          .yOffset(-vm.h*0.03)
+    
       finalText
        
       Button {
@@ -129,6 +130,7 @@ struct Welcome: View {
           .resizableToFit(height: 74)
       }
       .yOffset(vm.h*0.4)
+      .yOffsetIf(vm.isSEight, -24)
     }
     .xOffsetIf(page != 3, vm.w)
   }
@@ -214,6 +216,7 @@ struct Welcome: View {
         .tappableBg()
     }
     .offset(vm.w*0.4, -vm.h*0.42)
+    .yOffsetIf(vm.isSEight, 34)
   }
 }
 

@@ -16,7 +16,7 @@ final class GameViewModel: ObservableObject {
   @Published var isWin = false
   @Published var showPopUp = false
   @Published var time = 0
-  @Published var balance = 10000
+  @Published var balance = 10
   // SimulationStats
   @Published var totalSpins = 0
   @Published var totalWins = 0
@@ -34,6 +34,7 @@ final class GameViewModel: ObservableObject {
       .blue: []
   ]
 
+  @Published var showNoMoney = false
   @Published var selectedCard: Card?
   @Published var isGameOver = false
   @Published var playerWon = false
@@ -86,7 +87,6 @@ final class GameViewModel: ObservableObject {
       checkForGameEnd()
       turnOn = false
     }
-  
   }
 
   func drawCard(for player: Player) {
@@ -205,33 +205,52 @@ final class GameViewModel: ObservableObject {
       }
   }
   
+  
+  func multiplier(for numberOfCards: Int) -> Int {
+      switch numberOfCards {
+      case 1: return 1
+      case 2: return 2
+      case 3: return 3
+      case 4: return 5
+      case 5...: return 10
+      default: return 0
+      }
+  }
+  
+  func playerCardCount(in zone: Zone) -> Int {
+      zones[zone]?.filter { $0.player == .player }.count ?? 0
+  }
+  
   func endGame() {
     var playerZonesWon: [Zone] = []
     var totalMultiplier = 0
     
     for (zone, cards) in zones {
       guard let last = cards.last else { continue }
-      
+      let cardCount = playerCardCount(in: zone)
+      let zoneMultiplier = multiplier(for: cardCount)
       if last.player == .player {
         playerZonesWon.append(zone)
-        totalMultiplier += cards.count
+        totalMultiplier += zoneMultiplier
       }
     }
     
     if playerZonesWon.count >= 2 {
       playerWon = true
       finalWinnings = bet * totalMultiplier
-      print("Win: x \(totalMultiplier)")
+      balance += finalWinnings
     } else {
       playerWon = false
       finalWinnings = -bet * zones
         .filter { $0.value.last?.player == .bot }
         .map { $0.value.count }
         .reduce(0, +)
-      print("Loos: x \(finalWinnings)")
+      balance = max(balance - bet, 0)
+      if balance <= 0 {
+        showNoMoney = true
+      }
     }
     isGameOver = true
-    print("EEENND GAMME!!!")
   }
   
   func canAnyCardBePlayed(_ cards: [Card], for player: Player) -> Bool {
@@ -263,31 +282,20 @@ final class GameViewModel: ObservableObject {
   }
   
   func resetGame() {
-      // Reset hands
       hand = []
       botHand = []
-
-      // Reset draw pile, discard pile, and zones
       drawPile = []
       discardPile = []
       zones = [.red: [], .yellow: [], .blue: []]
-
-      // Reset selected card and game over state
       selectedCard = nil
       isGameOver = false
       playerWon = false
       finalWinnings = 0
-
-      // Reset turn state and bet
       turnOn = true
-      bet = 100
-
-      // Start a new game setup
+      bet = min(100, balance)
       startGame()
   }
-  
 
-  
   func resetvm() {
     showPopUp = false
     showResetBtn = false
@@ -295,12 +303,11 @@ final class GameViewModel: ObservableObject {
   }
 
   // MARK: Bonus Timer
-  
   @Published var timeRemaining: String = "3:30:00"
   @Published var canClaimBonus: Bool = false
   
   private var timer: Timer?
-  private var remainingSeconds: Int = 2 * 60 * 60
+  private var remainingSeconds: Int = 3 * 60 * 60 +  60  * 30
   private let lastSavedTimeKey = "lastSavedTime"
   private let remainingTimeKey = "remainingTime"
   
@@ -349,7 +356,7 @@ final class GameViewModel: ObservableObject {
         return
       }
     } else {
-      remainingSeconds = 2 * 60 * 60
+      remainingSeconds = 3 * 60 * 60 +  60  * 30
     }
     startTimer()
   }
@@ -384,7 +391,7 @@ final class GameViewModel: ObservableObject {
     guard canClaimBonus else { return }
     canClaimBonus = false
     balance += 1000
-    remainingSeconds = 2 * 60 * 60
+    remainingSeconds = 3 * 60 * 60 + 60  * 30
     startTimer()
   }
   
